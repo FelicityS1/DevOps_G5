@@ -5,7 +5,7 @@ const aiService = require('../aiService');
 // Send a message and get AI response
 exports.sendMessage = async (req, res) => {
   try {
-    const { message, sessionId } = req.body;
+    const { message, sessionId, category } = req.body;
     
     if (!message) {
       return res.status(400).json({ error: 'Message is required' });
@@ -19,6 +19,8 @@ exports.sendMessage = async (req, res) => {
       text: message,
       sender: 'user',
       sessionId: chatSessionId,
+      category: category,
+      status: 'Read',
       timestamp: new Date()
     });
     await userMessage.save();
@@ -31,7 +33,10 @@ exports.sendMessage = async (req, res) => {
         setTimeout(() => reject(new Error('Request timeout')), 10000)
       );
       
-      const aiResultPromise = aiService.generateResponse(message);
+      const aiResultPromise = aiService.generateResponse(
+          message,
+          category
+        );
       aiResult = await Promise.race([aiResultPromise, timeoutPromise]);
     } catch (error) {
       console.error('Error getting AI response:', error);
@@ -46,6 +51,8 @@ exports.sendMessage = async (req, res) => {
       text: aiResult.response,
       sender: 'ai',
       sessionId: chatSessionId,
+      category: category,
+      status: 'Read',
       timestamp: new Date()
     });
     await aiMessage.save();

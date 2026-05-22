@@ -17,6 +17,16 @@ const messageSchema = new mongoose.Schema({
     required: true,
     index: true
   },
+  category: {
+    type: String,
+    default: 'General'
+  },
+
+  status: {
+  type: String,
+  default: 'Sent'
+},
+
   timestamp: {
     type: Date,
     default: Date.now

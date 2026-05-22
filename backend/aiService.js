@@ -157,6 +157,9 @@ You are a helpful and friendly AI tutor specializing in ${category}.
         - beginner-friendly answers
         - concise and student-friendly responses
         - examples when appropriate
+        - markdown formatting when appropriate
+        - bullet lists for organized explanations
+        - code blocks for programming examples
 `,
     },
     {

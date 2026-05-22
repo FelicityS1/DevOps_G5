@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import ReactMarkdown from 'react-markdown';
 
 export default function Home() {
   const [recentActivity, setRecentActivity] = useState([]);
@@ -11,6 +12,7 @@ export default function Home() {
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(true);
   const [isTyping, setIsTyping] = useState(false);
+  const [error, setError] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('General');
   const [sessionId, setSessionId] = useState('');
   const messageEndRef = useRef(null);
@@ -69,9 +71,16 @@ export default function Home() {
   // Submit a new message
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    if (!navigator.onLine) {
+      setError('No internet connection.');
+      return;
+    }
+
     if (!newMessage.trim()) return;
     
     try {
+      setError('');
       setIsTyping(true); // Show typing indicator
       const userMsg = newMessage;
       setNewMessage('');
@@ -89,8 +98,9 @@ export default function Home() {
       const response = await axios.post(
          'http://localhost:3000/api/chat/send',
           {
-            message: userMsg,
-            sessionId: sessionId
+              message: userMsg,
+              sessionId: sessionId,
+              category: selectedSubject
           }
         );
       
@@ -104,6 +114,9 @@ export default function Home() {
     } catch (error) {
       console.error('Error posting message:', error);
       // Show error in chat
+
+      setError('Failed to send message.');
+
       setMessages(prev => [...prev, {
         _id: Date.now().toString(),
         text: "Sorry, I couldn't process your request. Please try again later.",
@@ -131,7 +144,7 @@ export default function Home() {
 
   } else {
 
-    const newSessionId = Date.now().toString();
+    const newSessionId = crypto.randomUUID();
 
     localStorage.setItem(
       'chatSessionId',
@@ -150,6 +163,26 @@ useEffect(() => {
     fetchDashboardData();
   }
 }, [sessionId]);
+
+useEffect(() => {
+
+  const handleOffline = () => {
+    alert('You are offline');
+  };
+
+  window.addEventListener(
+    'offline',
+    handleOffline
+  );
+
+  return () => {
+    window.removeEventListener(
+      'offline',
+      handleOffline
+    );
+  };
+
+}, []);
 
 
   return (
@@ -170,9 +203,9 @@ useEffect(() => {
   
 
 
-  
 
-  <h2>User Profile</h2>
+
+  {/* <h2>User Profile</h2>
 
   <input
     type="text"
@@ -228,7 +261,7 @@ useEffect(() => {
     }}
   >
     Save Profile
-  </button>
+  </button> */}
 
 </div>
 
@@ -318,13 +351,21 @@ useEffect(() => {
                       boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
                     }}
                   >
-                    <div style={{ margin: '0 0 5px 0', lineHeight: '1.5' }}>{message.text}</div>
+                    <div style={{ margin: '0 0 5px 0', lineHeight: '1.5' }}>
+                      <ReactMarkdown>
+                        {message.text}
+                      </ReactMarkdown>
+                    </div>
                     <div style={{ 
                       fontSize: '12px', 
                       color: '#666',
                       textAlign: message.sender === 'user' ? 'right' : 'left'
                     }}>
-                      {message.sender === 'user' ? 'You' : 'AI Tutor'} • {new Date(message.timestamp).toLocaleTimeString()}
+                      {message.sender === 'user' ? 'You' : 'AI Tutor'}
+                        •
+                        {new Date(message.timestamp).toLocaleTimeString()}
+                        •
+                        {message.status}
                     </div>
                   </li>
                 ))}
@@ -374,6 +415,20 @@ useEffect(() => {
     <option value="English">English</option>
   </select>
 </div>
+
+        {error && (
+          <div
+            style={{
+              backgroundColor: '#ffebee',
+              color: '#c62828',
+              padding: '10px',
+              borderRadius: '8px',
+              marginBottom: '10px'
+            }}
+          >
+            {error}
+          </div>
+        )}
       
       <form onSubmit={handleSubmit} style={{ display: 'flex' }}>
         <input
