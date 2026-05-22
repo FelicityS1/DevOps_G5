@@ -12,18 +12,20 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [isTyping, setIsTyping] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState('General');
+  const [sessionId, setSessionId] = useState('');
   const messageEndRef = useRef(null);
+  
 
   const fetchDashboardData = async () => {
   try {
 
     const response = await axios.get(
-      'http://localhost:3000/api/messages'
+      `http://localhost:3000/api/chat/history/${sessionId}`
     );
 
-    setRecentActivity(response.data);
+    setRecentActivity(response.data.messages);
 
-    setMessageCount(response.data.length);
+    setMessageCount(response.data.messages.length);
 
   } catch (error) {
     console.error('Error loading dashboard:', error);
@@ -31,10 +33,11 @@ export default function Home() {
 };
 
   // Fetch messages from the API
-  const fetchMessages = async () => {
+  const fetchMessages = async (sid) => {
     try {
-      const response = await axios.get('http://localhost:3000/api/messages');
-      setMessages(response.data);
+      const response = await axios.get(
+  `http://localhost:3000/api/chat/history/${sid}`);    
+      setMessages(response.data.messages);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching messages:', error);
@@ -77,17 +80,17 @@ export default function Home() {
       const tempUserMsg = {
         _id: Date.now().toString(),
         text: userMsg,
-        isUser: true,
-        createdAt: new Date().toISOString()
+        sender: 'user',
+        timestamp: new Date().toISOString()
       };
       setMessages(prev => [...prev, tempUserMsg]);
       
       // Send to backend and get AI response
       const response = await axios.post(
-          'http://localhost:3000/api/messages',
+         'http://localhost:3000/api/chat/send',
           {
-            text: userMsg,
-            subject: selectedSubject
+            message: userMsg,
+            sessionId: sessionId
           }
         );
       
@@ -104,8 +107,8 @@ export default function Home() {
       setMessages(prev => [...prev, {
         _id: Date.now().toString(),
         text: "Sorry, I couldn't process your request. Please try again later.",
-        isUser: false,
-        createdAt: new Date().toISOString()
+        sender: 'ai',
+        timestamp: new Date().toISOString()
       }]);
     } finally {
       setIsTyping(false);
@@ -117,11 +120,37 @@ export default function Home() {
     messageEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Load messages on component mount
+
   useEffect(() => {
-      fetchMessages();
-      fetchDashboardData();
-    }, []);
+  const storedSessionId = localStorage.getItem('chatSessionId');
+
+  if (storedSessionId) {
+    setSessionId(storedSessionId);
+
+    fetchMessages(storedSessionId);
+
+  } else {
+
+    const newSessionId = Date.now().toString();
+
+    localStorage.setItem(
+      'chatSessionId',
+      newSessionId
+    );
+
+    setSessionId(newSessionId);
+
+     setMessages([]);
+     setLoading(false);
+  }
+}, []);
+
+useEffect(() => {
+  if (sessionId) {
+    fetchDashboardData();
+  }
+}, [sessionId]);
+
 
   return (
     <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px', fontFamily: 'Nunito, sans-serif' }}>
@@ -137,6 +166,8 @@ export default function Home() {
     boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
   }}
 >
+
+  
 
 
   
@@ -233,7 +264,7 @@ export default function Home() {
           <li key={activity._id} style={{ marginBottom: '10px' }}>
 
             <strong>
-              {activity.isUser ? 'You' : 'AI Tutor'}
+              {activity.sender === 'user' ? 'You' : 'AI Tutor'}
             </strong>
 
             : {activity.text}
@@ -277,13 +308,13 @@ export default function Home() {
                     style={{ 
                       padding: '12px 16px', 
                       margin: '8px 0', 
-                      backgroundColor: message.isUser ? '#e3f2fd' : '#e8f5e9',
+                      backgroundColor: message.sender === 'user' ? '#e3f2fd' : '#e8f5e9',
                       color: '#333',
                       borderRadius: '12px',
                       maxWidth: '80%',
                       wordBreak: 'break-word',
-                      marginLeft: message.isUser ? 'auto' : '0',
-                      marginRight: message.isUser ? '0' : 'auto',
+                      marginLeft: message.sender === 'user' ? 'auto' : '0',
+                      marginRight: message.sender === 'user' ? '0' : 'auto',
                       boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
                     }}
                   >
@@ -291,9 +322,9 @@ export default function Home() {
                     <div style={{ 
                       fontSize: '12px', 
                       color: '#666',
-                      textAlign: message.isUser ? 'right' : 'left'
+                      textAlign: message.sender === 'user' ? 'right' : 'left'
                     }}>
-                      {message.isUser ? 'You' : 'AI Tutor'} • {new Date(message.createdAt).toLocaleTimeString()}
+                      {message.sender === 'user' ? 'You' : 'AI Tutor'} • {new Date(message.timestamp).toLocaleTimeString()}
                     </div>
                   </li>
                 ))}

@@ -40,11 +40,18 @@ async function generateResponse(question, selectedSubject = 'General') {
     lowerQuestion.includes("difficult") ||
     lowerQuestion.includes("frustrated");
   
-  const isMath = lowerQuestion.includes('calculate') || 
-                 lowerQuestion.includes('math') ||
-                 lowerQuestion.includes('1+1') ||
-                 /[+\-*\/=]/.test(lowerQuestion) ||
-                 /\d+/.test(lowerQuestion);
+  const isMath =
+  lowerQuestion.includes('calculate') ||
+  lowerQuestion.includes('math') ||
+  lowerQuestion.includes('solve') ||
+  lowerQuestion.includes('equation') ||
+  lowerQuestion.includes('algebra') ||
+  lowerQuestion.includes('geometry') ||
+  lowerQuestion.includes('multiply') ||
+  lowerQuestion.includes('divide') ||
+  lowerQuestion.includes('addition') ||
+  lowerQuestion.includes('subtraction') ||
+  /[+\-*\/=]/.test(lowerQuestion);
   
   const isHistory = lowerQuestion.includes('history') ||
                     lowerQuestion.includes('capital') ||
@@ -70,17 +77,22 @@ async function generateResponse(question, selectedSubject = 'General') {
     lowerQuestion.includes('noun') ||
     lowerQuestion.includes('verb');
 
-  // Determine the category based on keyword matching
-  let category = 'general';
-  // Prioritize frontend selected subject
-  if (selectedSubject !== 'General') {
-    category = selectedSubject.toLowerCase();
-  }
+ let category = 'general';
+
+// PRIORITIZE selected subject first
+if (selectedSubject && selectedSubject !== 'General') {
+
+  category = selectedSubject.toLowerCase();
+
+} else {
+
+  // Only auto-detect when General is selected
   if (isMath) category = 'math';
   if (isHistory) category = 'history';
   if (isScience) category = 'science';
   if (isProgramming) category = 'programming';
   if (isEnglish) category = 'english';
+}
 
   // Check for direct matches to provide immediate responses without API call
   // This will bypass the API call for common questions we know will work
@@ -123,6 +135,7 @@ if (category === 'math') {
     // Using a smaller model that responds faster
   const completion = await client.chat.completions.create({
   model: "llama-3.1-8b-instant",
+  max_tokens: 300,
   messages: [
     {
       role: "system",
@@ -142,6 +155,7 @@ You are a helpful and friendly AI tutor specializing in ${category}.
         Always provide:
         - clear explanations
         - beginner-friendly answers
+        - concise and student-friendly responses
         - examples when appropriate
 `,
     },
